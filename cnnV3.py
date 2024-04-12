@@ -107,8 +107,9 @@ def validate_one_epoch(model, val_loader, criterion):
 
             val_loss += loss
             num_samples += images.size(0)
-    avg_val_loss = val_loss / num_samples
+            avg_val_loss = val_loss / num_samples
     return avg_val_loss
+
 
 class ConvNet(nn.Module):
     def __init__(self, file):
@@ -162,11 +163,11 @@ def predict(model, test_loader):
 
 def loop():   
     global file_counter
-    file = open(f"Adam{file_counter}.txt", "a+")
+    file = open(f"SGD{file_counter}.txt", "a+")
     file_counter += 1
     file.write("\n\n\n")
     # Hypearameters
-    for lrn in (0.0001,):
+    for lrn in (0.01,):
         for bsz in (16, 32, 64, 128):
             gen_train_loss =[]
             gen_val_loss = []
@@ -191,7 +192,7 @@ def loop():
 
             model = ConvNet(file).to(device)
             criterion = nn.CrossEntropyLoss()
-            optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate, weight_decay=1e-5)
+            optimizer = torch.optim.SGD(model.parameters(), lr=learn_rate, weight_decay=1e-5)
 
             n_total_steps = len(train_loader)
             for epoch in np.arange(200): #max of 200 epochs

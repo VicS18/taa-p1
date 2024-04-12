@@ -56,9 +56,9 @@ class EarlyStopper:
                 return True
         return False
 
-
 class CustomDataset(Dataset):
-    def __init__(self, data, labels):
+    def __init__(self, data, labels, transform = False):
+        self.transform = transform
         self.data = torch.tensor(data, dtype=torch.float32)
         self.labels = torch.tensor(labels, dtype=torch.long)
 
@@ -66,10 +66,19 @@ class CustomDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        return self.data[index], self.labels[index]
+        image,label = self.data[index], self.labels[index]
+        if self.transform:
+            image = self.transform(image) 
+        return image,label
+# Define transformations for data augmentation
+train_transform = transforms.Compose([
+    transforms.RandomRotation(10),       # Random rotation within [-10, 10] degrees
+    transforms.RandomResizedCrop(28, scale=(0.9, 1.0), ratio=(0.9, 1.1)),  # Random resized crop
+])
+
 
 # Create custom datasets
-train_dataset = CustomDataset(train_dataset, train_labels)
+train_dataset = CustomDataset(train_dataset, train_labels, transform= train_transform)
 test_dataset = CustomDataset(test_dataset, test_labels)
 
 train_size = int(0.9 * len(train_dataset))
@@ -162,7 +171,7 @@ def predict(model, test_loader):
 
 def loop():   
     global file_counter
-    file = open(f"Adam{file_counter}.txt", "a+")
+    file = open(f"V2_NAdam{file_counter}.txt", "a+")
     file_counter += 1
     file.write("\n\n\n")
     # Hypearameters
@@ -191,7 +200,7 @@ def loop():
 
             model = ConvNet(file).to(device)
             criterion = nn.CrossEntropyLoss()
-            optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate, weight_decay=1e-5)
+            optimizer = torch.optim.NAdam(model.parameters(), lr=learn_rate, weight_decay=1e-5)
 
             n_total_steps = len(train_loader)
             for epoch in np.arange(200): #max of 200 epochs
