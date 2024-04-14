@@ -13,7 +13,7 @@ import csv
 from torch.utils.data import DataLoader, Dataset, random_split
 from time import time
 
-DATA_AUG = True
+DATA_AUG = False
 
 global file_counter
 file_counter = 1
@@ -153,12 +153,10 @@ class ConvNet(nn.Module):
         x = self.fc3(x)
         return x
 
-def predict(model, test_loader):
+def predict_acc(model, test_loader):
     with torch.no_grad(): # Predict Test Dataset
         n_correct = 0
         n_samples = 0
-        n_class_correct = [0 for i in range(26)]
-        n_class_samples = [0 for i in range(26)]
 
         for images, labels in test_loader:
             images = images.to(device)  # Add a channel dimension for grayscale images
@@ -168,18 +166,26 @@ def predict(model, test_loader):
             n_samples += labels.size(0)
             n_correct += (predicted == labels).sum().item()
 
-            for i in range(labels.size(0)):
-                label = labels[i]
-                pred = predicted[i]
-                if (label == pred):
-                    n_class_correct[label] += 1
-                n_class_samples[label] += 1
+    return 100 * n_correct / n_samples
 
-        acc = 100.0 * n_correct / n_samples
-    return acc
-    #    for i in range(26):
-    #        acc = 100.0 * n_class_correct[i] / n_class_samples[i] if n_class_samples[i] > 0 else 0
-    #        print(f"Accuracy of the class {classes[i]}: {acc} %")
+def predict_confusion(model, test_loader):
+    with torch.no_grad(): # Predict Test Dataset
+        n_correct = 0
+        n_samples = 0
+        confusion_matrix = np.zeros((26,26))
+
+        for images, labels in test_loader:
+            images = images.to(device)  # Add a channel dimension for grayscale images
+            labels = labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs, 1)
+            n_samples += labels.size(0)
+            n_correct += (predicted == labels).sum().item()
+
+            # Update confusion matrix
+            for i in range(labels.size(0)):
+                confusion_matrix[labels[i]][predicted[i]] += 1
+    return confusion_matrix
 
 def simple_plot(x, x_label, y_label, dir_path, batch_size, title, lr):
     plt.plot(x)
@@ -265,27 +271,28 @@ def loop():
                     # file.write(f"Validation Loss: {validation_loss}\n")
                     # file.write(f"Epoch [{epoch+1}/{100}]\n")
                     # file.write("\n")
-                    gen_train_acc.append(predict(model, train_loader))
+
+                    gen_train_acc.append(predict_acc(model, train_loader))
                     print(f"Accuracy on Training Data: {gen_train_acc[-1]} %")
 
-                    gen_val_acc.append(predict(model, val_loader))
+                    gen_val_acc.append(predict_acc(model, val_loader))
                     print(f"Accuracy on Validation Data: {gen_val_acc[-1]} %")
-                    
-                    gen_test_acc.append(predict(model, test_loader))
-                    print(f"Accuracy on Test Data: {gen_test_acc[-1]} %")
 
                     print()
 
                     if early_stopper.early_stop(validation_loss):             
                         break
-                test_acc = predict(model, test_loader)
+                test_confusion = predict_confusion(model, test_loader)
+
+                test_acc = 100 * np.trace(test_confusion) / np.sum(test_confusion)
                 print(f"Finished Training at epoch {epoch+1}!")
                 # file.write(f"Finished Training at epoch {epoch+1}!\n")
 
                 print("Elapsed Time: " , time()-timestamp," seconds." )
                 # file.write(f"Elapsed Time: {time()-timestamp,} seconds.\n")
 
-                print(f"Accuracy of the network: {predict(model, test_loader)} %")
+                print(f"Accuracy of the network: {test_acc} %")
+                # file.write(f"Accuracy of the network: {predict(model, test_loader)} %\n")
                 # file.write(f"Accuracy of the network: {predict(model, test_loader)} %\n")
 
                 #
@@ -311,6 +318,8 @@ def loop():
                 dir_path = f"{BASE_DIR}/lr_{lrn}"
                 if not os.path.isdir(dir_path):
                     os.makedirs(dir_path)
+
+                np.save(f"{dir_path}/bsz_{bsz}.npy", test_confusion)
 
                 torch.save(model.module.state_dict(), f"{dir_path}/bsz_{bsz}.pth")
 
