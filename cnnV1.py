@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,8 +7,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+import pickle
+import csv
+
 from torch.utils.data import DataLoader, Dataset, random_split
 from time import time
+
+BASE_DIR = "cnnV1_Adam"
+PLOT_DIR = f"{BASE_DIR}/plots"
 
 global file_counter
 file_counter = 1
@@ -160,91 +167,150 @@ def predict(model, test_loader):
     #        acc = 100.0 * n_class_correct[i] / n_class_samples[i] if n_class_samples[i] > 0 else 0
     #        print(f"Accuracy of the class {classes[i]}: {acc} %")
 
+def simple_plot(x, x_label, y_label, dir_path, batch_size, title, lr):
+    plt.plot(x)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.grid()
+    plt.figtext(.8, .8, f"Batch size = {batch_size}")
+    plt.title(title)
+
+    fig = plt.figure(1)
+    
+    dir_path = f"{dir_path}/lr_{lr}"
+    if not os.path.isdir(dir_path):
+        os.makedirs(dir_path)
+    plt.savefig(f"{dir_path}/bsz_{batch_size}.png")
+
+    with open(f"{dir_path}/bsz_{batch_size}_fig.obj", 'wb') as file:
+        pickle.dump(fig, file)
+
+    plt.close(fig)
+    plt.clf()
+    plt.cla()
+
+
 def loop():   
     global file_counter
     file = open(f"Adam{file_counter}.txt", "a+")
     file_counter += 1
     file.write("\n\n\n")
-    # Hypearameters
-    for lrn in (0.0001,):
-        for bsz in (16, 32, 64, 128):
-            gen_train_loss =[]
-            gen_val_loss = []
-            gen_train_acc =[]
-            gen_val_acc = []
-            gen_test_acc = []
-            early_stopper = EarlyStopper(patience=5, min_delta=1e-4)
 
-            batch_size = bsz
-            learn_rate = lrn
-            timestamp = time()
+    if not os.path.isdir(f'{BASE_DIR}'):
+        os.makedirs(f'{BASE_DIR}')
 
-            print("Hyper - Parameters:")
-            print("Batch-Size: ", batch_size)
-            print("Learning Rate: ", learn_rate)
-            file.write("Hyper - Parameters:\n")
-            file.write(f"Batch-Size: {batch_size}\n")
-            file.write(f"Learning Rate: {learn_rate}\n")
-            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-            test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
-            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    # Hyperparameters
+    with open(f'{BASE_DIR}/test_performance.csv', 'w', newline='') as csvfile:
+        # Prepare test performance file
+        fieldnames = ['learning_rate', 'batch_size', 'accuracy']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
 
-            model = ConvNet(file).to(device)
-            criterion = nn.CrossEntropyLoss()
-            optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate, weight_decay=1e-5)
+        for lrn in (0.0001, 0.001, 0.01):
+            for bsz in (16, 32, 64, 128):
+                gen_train_loss =[]
+                gen_val_loss = []
+                gen_train_acc =[]
+                gen_val_acc = []
+                gen_test_acc = []
+                early_stopper = EarlyStopper(patience=5, min_delta=1e-4)
 
-            n_total_steps = len(train_loader)
-            for epoch in np.arange(200): #max of 200 epochs
-                train_loss = train_one_epoch(model, train_loader, criterion, optimizer)
-                validation_loss = validate_one_epoch(model, test_loader, criterion)
-                gen_train_loss.append(str(train_loss.item()))
-                gen_val_loss.append(str(validation_loss.item()))
-                print(f"Train Loss: {train_loss}")
-                print(f"Validation Loss: {validation_loss}")
-                print(f"Epoch [{epoch+1}/{200}]")
-                #file.write(f"Train Loss: {train_loss}\n")
-                #file.write(f"Validation Loss: {validation_loss}\n")
-                #file.write(f"Epoch [{epoch+1}/{200}]\n")
-                #file.write("\n")
-                gen_train_acc.append(predict(model, train_loader))
-                print(f"Accuracy on Training Data: {gen_train_acc[-1]} %")
+                batch_size = bsz
+                learn_rate = lrn
+                timestamp = time()
 
-                gen_val_acc.append(predict(model, val_loader))
-                print(f"Accuracy on Validation Data: {gen_val_acc[-1]} %")
-                
-                gen_test_acc.append(predict(model, test_loader))
-                print(f"Accuracy on Test Data: {gen_test_acc[-1]} %")
+                print("Hyper - Parameters:")
+                print("Batch-Size: ", batch_size)
+                print("Learning Rate: ", learn_rate)
+                file.write("Hyper - Parameters:\n")
+                file.write(f"Batch-Size: {batch_size}\n")
+                file.write(f"Learning Rate: {learn_rate}\n")
+                train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+                test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+                val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-                print()
+                model = ConvNet(file).to(device)
+                criterion = nn.CrossEntropyLoss()
+                optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate, weight_decay=1e-5)
 
-                if early_stopper.early_stop(validation_loss):             
-                    break
+                n_total_steps = len(train_loader)
+                for epoch in np.arange(200): #max of 200 epochs
+                    train_loss = train_one_epoch(model, train_loader, criterion, optimizer)
+                    validation_loss = validate_one_epoch(model, test_loader, criterion)
+                    gen_train_loss.append(train_loss.item())
+                    gen_val_loss.append(validation_loss.item())
+                    print(f"Train Loss: {train_loss}")
+                    print(f"Validation Loss: {validation_loss}")
+                    print(f"Epoch [{epoch+1}/{200}]")
+                    # file.write(f"Train Loss: {train_loss}\n")
+                    # file.write(f"Validation Loss: {validation_loss}\n")
+                    # file.write(f"Epoch [{epoch+1}/{200}]\n")
+                    # file.write("\n")
+                    gen_train_acc.append(predict(model, train_loader))
+                    print(f"Accuracy on Training Data: {gen_train_acc[-1]} %")
 
-            print(f"Finished Training at epoch {epoch+1}!")
-            file.write(f"Finished Training at epoch {epoch+1}!\n")
+                    gen_val_acc.append(predict(model, val_loader))
+                    print(f"Accuracy on Validation Data: {gen_val_acc[-1]} %")
+                    
+                    gen_test_acc.append(predict(model, test_loader))
+                    print(f"Accuracy on Test Data: {gen_test_acc[-1]} %")
 
-            print("Elapsed Time: " , time()-timestamp," seconds." )
-            file.write(f"Elapsed Time: {time()-timestamp,} seconds.\n")
+                    print()
 
-            print(f"Accuracy of the network: {predict(model, test_loader)} %")
-            file.write(f"Accuracy of the network: {predict(model, test_loader)} %\n")
+                    if early_stopper.early_stop(validation_loss):             
+                        break
+                test_acc = predict(model, test_loader)
+                print(f"Finished Training at epoch {epoch+1}!")
+                # file.write(f"Finished Training at epoch {epoch+1}!\n")
 
-            file.write(f"Training Loss:[")
-            for value in gen_train_loss:
-                file.write(str(value) + ",")
-            file.write("]\n")
-            file.write(f"Validation Loss:[")
-            for value in gen_val_loss:
-                file.write(str(value) + ",")
-            file.write("]\n")
-            file.write(f"\nTraining Accuracy:[")
-            for value in gen_train_acc:
-                file.write(str(value) + ",")
-            file.write("]\n")
-            file.write(f"Validation Accuracy:[")
-            for value in gen_val_acc:
-                file.write(str(value) + ",")
-            file.write("]\n")
+                print("Elapsed Time: " , time()-timestamp," seconds." )
+                # file.write(f"Elapsed Time: {time()-timestamp,} seconds.\n")
+
+                print(f"Accuracy of the network: {predict(model, test_loader)} %")
+                # file.write(f"Accuracy of the network: {predict(model, test_loader)} %\n")
+
+                #
+                # Individual plots
+                #
+
+                # Training accuracy 
+                simple_plot(gen_train_acc, "Epoch", "Accuracy (%)", f"{PLOT_DIR}/train/accuracy", bsz, "Training accuracy", lrn)
+
+                # Training loss 
+                simple_plot(gen_train_loss, "Epoch", "$J(\\Theta)$", f"{PLOT_DIR}/train/loss", bsz, "Training loss", lrn)
+
+                # Validation accuracy 
+                simple_plot(gen_val_acc, "Epoch", "Accuracy (%)", f"{PLOT_DIR}/validation/accuracy", bsz, "Validation accuracy", lrn)
+
+                # Validation loss
+                simple_plot(gen_val_loss, "Epoch", "$J(\\Theta)$", f"{PLOT_DIR}/validation/loss", bsz, "Validation loss", lrn)
+
+                #
+                # Register data from test set predictions
+                #
+
+                writer.writerow({
+                    'learning_rate': lrn, 
+                    'batch_size': bsz, 
+                    'accuracy': test_acc
+                })
+
+                file.write(f"Training Loss:[")
+                for value in gen_train_loss:
+                    file.write(str(value) + ",")
+                file.write("]\n")
+                file.write(f"Validation Loss:[")
+                for value in gen_val_loss:
+                    file.write(str(value) + ",")
+                file.write("]\n")
+                file.write(f"\nTraining Accuracy:[")
+                for value in gen_train_acc:
+                    file.write(str(value) + ",")
+                file.write("]\n")
+                file.write(f"Validation Accuracy:[")
+                for value in gen_val_acc:
+                    file.write(str(value) + ",")
+                file.write("]\n")
 
 
 loop()
