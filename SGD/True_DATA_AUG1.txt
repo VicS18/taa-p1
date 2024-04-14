@@ -1,0 +1,27 @@
+
+
+
+Hyper - Parameters:
+Batch-Size: 16
+Learning Rate: 0.01
+Hyper - Parameters:
+Batch-Size: 32
+Learning Rate: 0.01
+Hyper - Parameters:
+Batch-Size: 64
+Learning Rate: 0.01
+Hyper - Parameters:
+Batch-Size: 128
+Learning Rate: 0.01
+Hyper - Parameters:
+Batch-Size: 16
+Learning Rate: 0.05
+Hyper - Parameters:
+Batch-Size: 32
+Learning Rate: 0.05
+Hyper - Parameters:
+Batch-Size: 64
+Learning Rate: 0.05
+Hyper - Parameters:
+Batch-Size: 128
+Learning Rate: 0.05

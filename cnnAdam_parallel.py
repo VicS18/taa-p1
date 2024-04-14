@@ -13,7 +13,7 @@ import csv
 from torch.utils.data import DataLoader, Dataset, random_split
 from time import time
 
-DATA_AUG = False
+DATA_AUG = True
 
 global file_counter
 file_counter = 1
