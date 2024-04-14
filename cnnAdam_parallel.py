@@ -225,7 +225,7 @@ def loop():
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
-        for lrn in (0.01, 0.05):
+        for lrn in (0.0001, 0.001, 0.01):
             for bsz in (16, 32, 64, 128):
                 gen_train_loss =[]
                 gen_val_loss = []
