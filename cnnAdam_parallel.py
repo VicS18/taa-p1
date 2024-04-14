@@ -314,6 +314,16 @@ def loop():
                     'accuracy': test_acc
                 })
 
+                #
+                # Save model
+                #
+
+                dir_path = f"{BASE_DIR}/lr_{lrn}"
+                if not os.path.isdir(dir_path):
+                    os.makedirs(dir_path)
+
+                torch.save(model.module.state_dict(), f"{dir_path}/bsz_{bsz}.pth")
+
                 # file.write(f"Training Loss:[")
                 # for value in gen_train_loss:
                 #     file.write(str(value) + ",")
@@ -330,6 +340,7 @@ def loop():
                 # for value in gen_val_acc:
                 #     file.write(str(value) + ",")
                 # file.write("]\n")
+        
 
 
 loop()

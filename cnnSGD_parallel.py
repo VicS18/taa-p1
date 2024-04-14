@@ -292,17 +292,27 @@ def loop():
                 # Individual plots
                 #
 
-                # # Training accuracy 
-                # simple_plot(gen_train_acc, "Epoch", "Accuracy (%)", f"{PLOT_DIR}/train/accuracy", bsz, "Training accuracy", lrn)
+                # Training accuracy 
+                simple_plot(gen_train_acc, "Epoch", "Accuracy (%)", f"{PLOT_DIR}/train/accuracy", bsz, "Training accuracy", lrn)
 
-                # # Training loss 
-                # simple_plot(gen_train_loss, "Epoch", "$J(\\Theta)$", f"{PLOT_DIR}/train/loss", bsz, "Training loss", lrn)
+                # Training loss 
+                simple_plot(gen_train_loss, "Epoch", "$J(\\Theta)$", f"{PLOT_DIR}/train/loss", bsz, "Training loss", lrn)
 
-                # # Validation accuracy 
-                # simple_plot(gen_val_acc, "Epoch", "Accuracy (%)", f"{PLOT_DIR}/validation/accuracy", bsz, "Validation accuracy", lrn)
+                # Validation accuracy 
+                simple_plot(gen_val_acc, "Epoch", "Accuracy (%)", f"{PLOT_DIR}/validation/accuracy", bsz, "Validation accuracy", lrn)
 
-                # # Validation loss
-                # simple_plot(gen_val_loss, "Epoch", "$J(\\Theta)$", f"{PLOT_DIR}/validation/loss", bsz, "Validation loss", lrn)
+                # Validation loss
+                simple_plot(gen_val_loss, "Epoch", "$J(\\Theta)$", f"{PLOT_DIR}/validation/loss", bsz, "Validation loss", lrn)
+
+                #
+                # Save model
+                #
+
+                dir_path = f"{BASE_DIR}/lr_{lrn}"
+                if not os.path.isdir(dir_path):
+                    os.makedirs(dir_path)
+
+                torch.save(model.module.state_dict(), f"{dir_path}/bsz_{bsz}.pth")
 
                 #
                 # Register data from test set predictions
