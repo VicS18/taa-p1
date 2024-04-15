@@ -2,6 +2,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 import pandas as pd
 import numpy as np
+import seaborn as sns
 
 from shared import *
 
@@ -44,6 +45,8 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 test_results = predict_scores(model, test_loader)
 predicted_labels = np.argmax(test_results, axis=1)
 
+confusion_matrix = predict_confusion(model, test_loader)
+
 # Calculate evaluation metrics
 accuracy = accuracy_score(test_labels_all, predicted_labels)
 precision = precision_score(test_labels_all, predicted_labels, average='weighted')
@@ -57,3 +60,14 @@ print("Precision:", precision)
 print("Recall:", recall)
 print("F1 Score:", f1)
 print("Balanced Accuracy:", balanced_accuracy)
+
+
+confusion_matrix = confusion_matrix.astype(int)
+
+# Plot confusion matrix heatmap
+plt.figure(figsize=(10, 8))
+sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='Blues', cbar=False)
+plt.xlabel('Predicted labels')
+plt.ylabel('True labels')
+plt.title('Confusion Matrix')
+plt.show()
