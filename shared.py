@@ -196,8 +196,7 @@ def find_best_model(directory):
     return best_model_info
 
 # Function to load parameters from the best model
-def load_model_parameters(model_info):
-    learning_rate, batch_size, optimizer, data_augmentation = model_info
+def load_model_parameters(learning_rate, batch_size, optimizer, data_augmentation):
     model_path = f"{optimizer}/{data_augmentation}/lr_{learning_rate}/bsz_{batch_size}.pth"
     
     return torch.load(model_path)
